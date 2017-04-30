@@ -2,9 +2,12 @@
 <%@ page import="java.io.IOException"%>
 <%@ page import="java.util.List"%>
 <%@ page import="org.jdom2.Document"%>
-<%@ page import="org.jdom2.Element"%>
+
 <%@ page import="org.jdom2.JDOMException"%>
 <%@ page import="org.jdom2.input.SAXBuilder"%>
+
+<%@ page import="org.jdom2.filter.ElementFilter"%>
+
 
 <%@ page import="java.sql.Connection"%>
 <%@ page import="java.sql.Statement"%>
@@ -17,14 +20,31 @@
 		
 		Element element;
 		
-		public void setNode(Element element){
+		public Previsioni(Element element){
 			this.element = element;
 		}
 		
 		public String toString(){
-			return "<p>Temperatura: " + element.getChild("temperature").getAttribute("value").getValue() + "</p>"
+			//return "<p>Temperatura: " + element.getChild("temperature").getAttribute("value").getValue() + "</p>";
+            return "Ciao";
+		}
+   
+		public String getTemperature(){
+			return "<p>Temperatura: " + element.getChild("temperature").getAttribute("value").getValue() + "</p>";
+			
 		}
 		
+		public String getWind(){
+			String riga = "<p>Direzione del vento: " + element.getChild("windDirection").getAttribute("deg").getValue() + " " + element.getChild("windDirection").getAttribute("name").getValue() + "</p>";
+			riga += "<p>Velocita' del vento: " + element.getChild("windSpeed").getAttribute("mps").getValue() + " " +element.getChild("windSpeed").getAttribute("name").getValue() +"</p>";
+			return riga;
+		}
+		
+		public String getPressure(){
+			String riga = "<p>Pressione: " + element.getChild("pressure").getAttribute("value").getValue() + " " + element.getChild("pressure").getAttribute("unit").getValue() + "</p>";
+			return riga;
+		}
+	
 	}
 %>
 
@@ -71,37 +91,55 @@
 <%
 	//Get dati
 	
-	Previsioni[] previsioni = new Previsioni[3];
+	Previsioni[] previsioni = new Previsioni[9];
+	
+	/*
+	for(int i = 0; i < 9; i++){
+		previsioni[i] = new Previsioni(null);
+	}
+	*/
 	
 	String info = "";
 	if(count > 0){
 		SAXBuilder builder = new SAXBuilder();
 
 		//api.openweathermap.org/data/2.5/forecast?q=London,us&mode=xml
-		URL xmlFile = new URL("http://api.openweathermap.org/data/2.5/forecast?q=" + ciao + "&mode=xml&appid=772bb79a11f2fbd9668f0f7e54e722a1");
+		URL xmlFile = new URL("http://api.openweathermap.org/data/2.5/forecast?q=" + ciao + "&mode=xml&appid=772bb79a11f2fbd9668f0f7e54e722a1&lang=it");
 		
-		out.println("entro nel try");
-
 		try {
 
 			Document document = (Document) builder.build(xmlFile); // Creo il documento
 			Element rootNode = document.getRootElement(); //Recupero l'elemento del nodo root
 			
-			Element e = rootNode.getChild("location");
+			//Element e = rootNode.getChild("location");
 			
-			out.println("Siamo nella citt� di: " + e.getChild("name").getValue());
-			//out.println("La velocit� del vento e': "+ rootNode.getChild("forecast").getChild("time").getAttribute("from").getValue());
-			info = e.getChild("name").getValue();
-			//info += "La velocit� del vento e': " + rootNode.getChild("wind").getChild("speed").getAttribute("value").getValue();
+			System.out.println("Ciao!!!!!");
 			
-			out.println(": " +rootNode.getChild("forecast").getChild("time").getAttribute("from").getValue());
-			
-			for(int i = 0; i < 3; i++){
-				prevision[i] = new Previsioni(rootNode.getChild("forecast").getChild("time"));
-			}
+			List list = rootNode.getChild("forecast").getChildren("time");
+			previsioni = new Previsioni[list.size()];
 			
 			/*
-			//info = rootNode.getChild("forecast").getChild("time").getChild("precipitation").getAttribute("unit").getValue();
+			ElementFilter filter = new ElementFilter("forecast");
+						
+			for(Element c : rootNode.getDescendants(filter)) {
+				System.out.println("Ciaone");
+			}
+			*/
+			
+			for (int i =0; i< list.size(); i++){
+				Element node = (Element) list.get(i);
+				previsioni[i] = new Previsioni(node);
+			}
+			
+			for(int i = 0; i < 3; i++){
+				//System.out.println(rootNode.getChild("forecast").getChild("time").getChild("windSpeed").getAttribute("name").getValue());
+				previsioni[i] = new Previsioni(rootNode.getChild("forecast").getChild("time"));
+			}
+			
+			System.out.println("After for");
+			
+			/*
+			info = rootNode.getChild("forecast").getChild("time").getChild("precipitation").getAttribute("unit").getValue();
 			out.println(": " + rootNode.getChild("forecast").getChild("time").getChild("precipitation").getAttribute("unit").getValue());
 			out.println(": " +rootNode.getChild("forecast").getChild("time").getChild("precipitation").getAttribute("value").getValue());
 			out.println(": " +rootNode.getChild("forecast").getChild("time").getChild("precipitation").getAttribute("type").getValue());
@@ -127,24 +165,14 @@
 			out.println(": " +rootNode.getChild("forecast").getChild("time").getChild("clouds").getAttribute("all").getValue());
 			out.println(": " +rootNode.getChild("forecast").getChild("time").getChild("clouds").getAttribute("unit").getValue());
 			*/
-
-			/* Esempio se devo leggere da una lista di nodi
-			List list = rootNode.getChildren("city"); // Prendo la lista delle citt� 
-			for (int i = 0; i < list.size(); i++) {
-			   Element node = (Element) list.get(i);
-
-			   System.out.println("First Name : " + node.getChildText("country"));
-			   System.out.println("Last Name : " + node.getChildText("lastname"));
-			   System.out.println("Nick Name : " + node.getChildText("nickname"));
-			   System.out.println("Salary : " + node.getChildText("salary"));
-
-			}*/
-
 		} catch (IOException io) {
+			System.out.println("Error 1");
 			System.out.println(io.getMessage());
 		} catch (JDOMException jdomex) {
+			System.out.println("Error 2");
 			System.out.println(jdomex.getMessage());
 		}
+		System.out.println("Fine");
 	}
 	
 	
@@ -166,7 +194,7 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
 </style>
 <body>
 
-<!-- Navbar -->
+<!-- Navbar  <%@ page import="org.jdom2.Element"%> -->
 <div class="w3-top">
   <div class="w3-bar w3-red w3-card-2 w3-left-align w3-large">
     <a class="w3-bar-item w3-button w3-hide-medium w3-hide-large w3-right w3-padding-large w3-hover-white w3-large w3-red" href="javascript:void(0);" onclick="myFunction()" title="Toggle Navigation Menu"><i class="fa fa-bars"></i></a>
@@ -188,15 +216,7 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
 			<input name="city" class="w3-input" type="text" placeholder="Inserisci la citta'" style="width:30%">
 			<input value="Search" type="submit" class="w3-button w3-black w3-padding-large w3-large w3-margin-top">
 			<br>
-			<%
-				out.println(prevision[0].toString());
-				if(haInsterito){
-					if(count < 1){
-						out.println("Inserire una citta' corretta");
-					}
-				}
-				
-			%>
+			
 		</form>
     </center>
 </header>
@@ -208,8 +228,19 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
           <img src="Immagini/cloudyWeather.png" alt="Person">
             <div class="w3-container w3-center">
                 <h3>Oggi</h3>
-                <p>Nuvoloso</p>
-                <p>Temperatura: 15</p>
+				
+                <%				
+				if(haInsterito){
+					if(count < 1){
+						out.println("Inserire una citta' corretta");
+					} else {
+						out.println(previsioni[0].getTemperature());
+						out.println(previsioni[0].getWind());
+						out.println(previsioni[0].getPressure());
+					}
+				}
+			%>
+			
             </div>
         </div>
     </div>
@@ -219,8 +250,19 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
           <img src="Immagini/variableWeather.png"alt="Person">
             <div class="w3-container w3-center">
                 <h3>Domani</h3>
-                <p>Nuvoloso con un po di sole</p>
-                <p>Temperatura: 15</p>
+                
+				<%				
+				if(haInsterito){
+					if(count < 1){
+						out.println("Inserire una citta' corretta");
+					} else {
+						out.println(previsioni[3].getTemperature());
+						out.println(previsioni[3].getWind());
+						out.println(previsioni[3].getPressure());
+					}
+				}
+			%>
+				
             </div>
         </div>
     </div>
@@ -230,8 +272,17 @@ body,h1,h2,h3,h4,h5,h6 {font-family: "Lato", sans-serif}
           <img src="Immagini/sunnyWeather.png" alt="Person">
             <div class="w3-container w3-center">
                 <h3>Dopo domani</h3>
-                <p>Sole</p>
-                <p>Temperatura: 15</p>
+                <%				
+				if(haInsterito){
+					if(count < 1){
+						out.println("Inserire una citta' corretta");
+					} else {
+						out.println(previsioni[6].getTemperature());
+						out.println(previsioni[6].getWind());
+						out.println(previsioni[6].getPressure());
+					}
+				}
+			%>
             </div>
         </div>
     </div>
